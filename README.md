@@ -57,11 +57,59 @@ The system has been transformed from a hierarchical routing model to a **Unified
 pip install psycopg2-binary python-dotenv google-adk a2a-sdk uvicorn mcp
 ```
 
-### 3. Running the System
-You no longer need to run multiple services. Simply run the master agent:
+### 3. Configure Environment Variables
+Copy the example file and fill in your credentials:
+```bash
+cp .env.example .env
+```
+Edit `.env` and set:
+- `GEMINI_API_KEY` — your Google Gemini API key.
+- `DATABASE_URL` — your Supabase PostgreSQL connection string (e.g. `postgresql://postgres:<password>@<host>:5432/postgres`).
+
+### 4. Seed the Database
+Run the schema and seed scripts against your Supabase database:
+```bash
+python create_tables.py
+python run_seed.py
+```
+
+### 5. Running the System
+
+#### Option A — CLI Test Runner
+Execute the built-in test harness that fires three sample queries:
 ```bash
 python multi_agent.py
 ```
+
+#### Option B — ADK Dev UI (Recommended for Interactive Testing)
+The Google ADK ships with a browser-based Dev UI that lets you chat with your agent in real time.
+
+1. **Launch the Dev UI** — point `adk web` at the project root (the parent directory that contains the `agents/` folder):
+   ```bash
+   adk web .
+   ```
+   This starts a local FastAPI server (default `http://localhost:8000`).
+
+2. **Open the UI** — navigate to [http://localhost:8000](http://localhost:8000) in your browser.
+
+3. **Select the agent** — in the top-left dropdown, choose **`agents`** (the folder name that contains `agent.py`). The Dev UI auto-discovers any module that exports a `root_agent`.
+
+4. **Start chatting** — type a message in the chat box and press **Send**. Try the sample queries below to exercise every skill.
+
+---
+
+## 🧪 Testing the Agent
+
+Use these sample prompts to verify each capability:
+
+| Skill | Sample Prompt |
+|-------|---------------|
+| **Billing / Invoice** | *"How much was I charged for order b0eebc99-9c0b-4ef8-bb6d-6bb9bd380b13?"* |
+| **Order Status** | *"What is the status of order b0eebc99-9c0b-4ef8-bb6d-6bb9bd380b13?"* |
+| **Returns** | *"I want to return my order b0eebc99-9c0b-4ef8-bb6d-6bb9bd380b13."* |
+| **Tech Support** | *"My portal shows a 500 error when I log in. I'm on Chrome 120, Windows 11."* |
+
+> **Tip:** In the ADK Dev UI you can inspect every tool call and LLM reasoning step in the right-hand panel — great for debugging and demos.
 
 ---
 
