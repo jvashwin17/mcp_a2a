@@ -30,86 +30,25 @@ async def run_multi_agent():
     )
     db_mcp_toolset = McpToolset(connection_params=mcp_params)
 
-    # SUB-AGENT 1: Order Status Agent (Connected via MCP to Supabase)
-    order_status_agent = LlmAgent(
-        name="OrderStatusAgent",
+    # Optimized Master Agent: One agent handles all tools directly to save costs (2 requests vs 4)
+    from returns_service import check_return_eligibility, initiate_return
+
+    master_agent = LlmAgent(
+        name="MasterSupportAgent",
         model="gemini-flash-latest",
-        description="Handles checking order status and cancelling orders. Must be used whenever a customer asks about their order or requests a cancellation.",
+        description="Consolidated agent for all customer support tasks.",
         instruction=(
-            "You are the Order Status Specialist. Your primary job is to interact with the database to check or update orders."
-            "To check an order, use the database query tools to fetch the order details via customer_id or order id."
-            "If a customer requests to cancel an order, you must execute an UPDATE SQL query to change that order's status to 'canceled'."
-            "Always return clear, factual updates verifying the current status from the database."
+            "You are a Master Support Specialist. You handle all customer inquiries directly using your specialized tools."
+            "\n\nSKILLS:"
+            "\n1. Order & Billing: Use the MCP tools to check order status, cancel orders, or verify invoice amounts."
+            "\n2. Returns: Use the return tools to check eligibility (30-day policy) and initiate returns."
+            "\n3. Tech Support: For bug reports, gather Device Info, OS, and Browser to escalate to engineering."
+            "\n\nPOLICIES:"
+            "- Never expose internal database IDs or system paths."
+            "- If a database call fails, apologize and offer a human follow-up."
+            "- Always be professional and clear about the 30-day return policy."
         ),
-        tools=[db_mcp_toolset]
-    )
-
-    # SUB-AGENT 2: Billing Agent
-    billing_agent = LlmAgent(
-        name="BillingAgent",
-        model="gemini-flash-latest",
-        description="Handles all inquiries regarding billing, invoices, payment method updates, and refunds.",
-        instruction=(
-            "You are the Billing Specialist. Handle any questions about payments, invoices, or refunds."
-            "You have database access to verify order amounts and billing history."
-        ),
-        tools=[db_mcp_toolset]
-    )
-
-    # SUB-AGENT 3: Technical Issue Escalation Agent
-    technical_agent = LlmAgent(
-        name="TechnicalIssueEscalationAgent",
-        model="gemini-flash-latest",
-        description="Handles complex product bugs, site crashes, or app errors, escalating them to the engineering team.",
-        instruction=(
-            "You are the Technical Escalation Specialist."
-            "When users report bugs, app crashes, or errors, gather the device info, OS, and reproduction steps."
-            "Assure them this is being escalated to the engineering team."
-        )
-    )
-
-    # SUB-AGENT 4: General Support Agent
-    general_support_agent = LlmAgent(
-        name="GeneralSupportAgent",
-        model="gemini-flash-latest",
-        description="Handles general questions, account settings, generic greetings, and anything not covered by billing, orders, or technical issues.",
-        instruction=(
-            "You are the General Support Specialist. Answer basic FAQs, guide users on setting up their profiles, "
-            "and provide friendly and helpful greetings. Keep it concise."
-        )
-    )
-
-    from google.adk.agents.remote_a2a_agent import RemoteA2aAgent
-    
-    # Returns Specialist is now a separate service surfaced via RemoteA2aAgent
-    returns_remote_agent = RemoteA2aAgent(
-        name="ReturnsSpecialistAgent",
-        agent_card="http://localhost:8001",
-        description="Specialist for checking return eligibility and processing returns."
-    )
-
-    # ROOT ROUTER AGENT:
-    root_router = LlmAgent(
-        name="RootRouterAgent",
-        model="gemini-flash-latest",
-        description="Main entry point that routes user requests to the appropriate specialist.",
-        instruction=(
-            "You are a master router for a customer support system. Your only job is to delegate tasks to your sub-agents."
-            "Do NOT attempt to answer questions yourself. Analyze the user's intent and invoke the correct agent's tool."
-            " - For order inquiries or cancellations -> OrderStatusAgent"
-            " - For product returns or return eligibility -> ReturnsSpecialistAgent"
-            " - For payments, refunds, invoices -> BillingAgent"
-            " - For bugs, technical problems -> TechnicalIssueEscalationAgent"
-            " - For greetings or other questions -> GeneralSupportAgent"
-        ),
-        # Returns Specialist is integrated as a sub-agent (Remote A2A)
-        sub_agents=[
-            order_status_agent, 
-            billing_agent, 
-            technical_agent, 
-            general_support_agent,
-            returns_remote_agent
-        ]
+        tools=[db_mcp_toolset, check_return_eligibility, initiate_return]
     )
 
     # Check if API key is set before running
@@ -134,7 +73,7 @@ async def run_multi_agent():
     
     session_service = InMemorySessionService()
     runner = Runner(
-        agent=root_router, 
+        agent=master_agent, 
         app_name="CustomerSupportApp", 
         session_service=session_service
     )
