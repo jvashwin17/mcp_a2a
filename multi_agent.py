@@ -62,9 +62,9 @@ async def run_multi_agent():
 
     # User-requested test scenarios
     test_queries = [
-        "How much was I charged for order b0eebc99-9c0b-4ef8-bb6d-6bb9bd380b12? I need to verify my invoice.", # Billing (MCP)
-        "I want to return my order b0eebc99-9c0b-4ef8-bb6d-6bb9bd380b12. Please initiate it.",               # Returns (A2A)
-        "My support portal is showing a '500 Internal Server Error' whenever I log in. Escalating this."     # Escalation (Local)
+        "How much was I charged for order b0eebc99-9c0b-4ef8-bb6d-6bb9bd380b13? I need to verify my invoice.", # Billing (MCP)
+        "I want to return my order b0eebc99-9c0b-4ef8-bb6d-6bb9bd380b13. Please initiate it.",               # Returns
+        "My support portal is showing a '500 Internal Server Error' whenever I log in. Escalating this."     # Escalation
     ]
 
     from google.adk.runners import Runner
